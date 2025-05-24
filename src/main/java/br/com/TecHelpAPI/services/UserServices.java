@@ -9,6 +9,7 @@ import br.com.TecHelpAPI.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.List;
 public class UserServices {
 
     private final Logger logger = LoggerFactory.getLogger(UserServices.class.getName());
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Autowired
     UserRepository repository;
@@ -27,15 +29,21 @@ public class UserServices {
     }
 
     public UserDTO findById(Long id) {
-        logger.info("Finding one user!");
-        var entity = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No records found for this id"));
+        logger.info("Finding user by ID: {}", id);
+        User entity = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         return parseObject(entity, UserDTO.class);
     }
 
     public UserDTO create(UserDTO user) {
         logger.info("Create one user!");
+
+        if (repository.findByEmail(user.getEmail()).isPresent()) {
+            throw new ResourceNotFoundException("Email já cadastrado");
+        }
+
         var entity = parseObject(user, User.class);
+        entity.setPassword(passwordEncoder.encode(user.getPassword())); // Criptografa
         return parseObject(repository.save(entity), UserDTO.class);
     }
 
@@ -45,7 +53,12 @@ public class UserServices {
                 .orElseThrow(() -> new ResourceNotFoundException("No records found for this id"));
 
         entity.setNameUser(user.getNameUser());
-        entity.setPassword(user.getPassword());
+
+        // Atualiza senha apenas se for diferente
+        if (!user.getPassword().equals(entity.getPassword())) {
+            entity.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
+
         entity.setDept(user.getDept());
         entity.setEmail(user.getEmail());
 
@@ -53,15 +66,14 @@ public class UserServices {
     }
 
     public void delete(Long id) {
-        logger.info("Delete one user!");
-        User entity = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No records found for this id"));
-        repository.delete(entity);
+        logger.info("Deleting user with ID: {}", id);
+        User user = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        repository.delete(user);
     }
 
     public boolean authenticate(String nameUser, String password) {
         logger.info("Authenticating user with username: {}", nameUser);
-
         var optionalUser = repository.findByNameUser(nameUser);
 
         if (optionalUser.isEmpty()) {
@@ -70,13 +82,6 @@ public class UserServices {
         }
 
         User user = optionalUser.get();
-
-        if (user.getPassword().equals(password)) {
-            logger.info("User authenticated successfully");
-            return true;
-        } else {
-            logger.warn("Invalid password for username: {}", nameUser);
-            return false;
-        }
+        return passwordEncoder.matches(password, user.getPassword()); // Comparação segura
     }
 }

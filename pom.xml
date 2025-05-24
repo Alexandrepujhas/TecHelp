@@ -20,6 +20,15 @@
 			<id>central</id>
 			<url>https://repo.maven.apache.org/maven2</url>
 		</repository>
+
+
+			<repository>
+				<id>microsoft</id>
+				<name>Microsoft SQL Server JDBC</name>
+				<url>https://repo.maven.apache.org/maven2/com/microsoft/sqlserver/</url>
+			</repository>
+
+
 	</repositories>
 
 	<dependencies>
@@ -33,6 +42,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
 
 		<dependency>
 			<groupId>org.springframework.hateoas</groupId>
